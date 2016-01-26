@@ -1,0 +1,23 @@
+{
+  "name": "define",
+  "description": "An alternate style for defining properties with custom behavior.",
+  "version": "1.0.0",
+  "main": "js/src/index.js",
+  "dependencies": {
+    "computed-var": "aleclarson/computed-var#1.0.0",
+    "has": "^1.0.1",
+    "in-array": "^0.1.0",
+    "is-node-env": "aleclarson/is-node-env#1.0.0",
+    "lazy-var": "aleclarson/lazy-var#1.0.0",
+    "lotus-require": "aleclarson/lotus-require#1.0.0",
+    "named-function": "aleclarson/named-function#1.0.3",
+    "reactive-var": "aleclarson/reactive-var#1.0.6"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aleclarson/define.git"
+  },
+  "licenses": [
+    "MIT"
+  ]
+}
