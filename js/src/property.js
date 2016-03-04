@@ -1,7 +1,7 @@
-var ComputedVar, LazyVar, Property, ReactiveVar, createSetter, deleteKeys, has, isNameableFunction, isPrototype, isUppercase, reportFailure, scope, startsWithLetter,
+var ComputedVar, LazyVar, Property, ReactiveVar, createSetter, deleteKeys, has, isNameableFunction, isPrototype, isUppercase, scope, startsWithLetter, throwFailure,
   slice = [].slice;
 
-reportFailure = require("report-failure");
+throwFailure = require("failure").throwFailure;
 
 ComputedVar = require("computed-var");
 
@@ -89,43 +89,42 @@ Property = module.exports = function(key, data) {
   if (prop.needsValue && (prop.value == null)) {
     return target;
   }
-  if (prop.lazy instanceof Function) {
-    prop.value = LazyVar(prop.lazy);
-    delete prop.lazy;
-  }
   if (prop.get instanceof Function) {
     prop.writable = prop.set != null;
     getter = function() {
       return prop.get.call(this);
     };
+  } else if (prop.set instanceof Function) {
+    throw Error("'set' cannot be defined without 'get'!");
   } else if (prop.reactive) {
     prop.writable = true;
-    prop.value = ReactiveVar(prop.value);
-    if (prop.DEBUG) {
-      prop.value.name = prop.key;
-    }
+    prop.value = new ReactiveVar(prop.value);
     getter = function() {
       return prop.value.get();
     };
     prop.set = function(newValue) {
       return prop.value.set(newValue);
     };
-  } else if ((prop.value instanceof ComputedVar) || (prop.value instanceof LazyVar)) {
-    getter = function() {
-      return prop.value.get.call(this);
-    };
-    prop.set = function(newValue, oldValue) {
-      return prop.value.set.call(this, newValue, oldValue);
-    };
-  } else if (prop.set instanceof Function) {
-    throw Error("'set' cannot be defined without 'get'.");
   } else {
-    getter = function() {
-      return prop.value;
-    };
-    prop.set = function(newValue) {
-      return prop.value = newValue;
-    };
+    if (prop.lazy instanceof Function) {
+      prop.value = LazyVar(prop.lazy);
+      delete prop.lazy;
+    }
+    if ((prop.value instanceof ComputedVar) || (prop.value instanceof LazyVar)) {
+      getter = function() {
+        return prop.value.get.call(this);
+      };
+      prop.set = function(newValue, oldValue) {
+        return prop.value.set.call(this, newValue, oldValue);
+      };
+    } else {
+      getter = function() {
+        return prop.value;
+      };
+      prop.set = function(newValue) {
+        return prop.value = newValue;
+      };
+    }
   }
   setter = createSetter(getter, prop);
   try {
@@ -137,7 +136,7 @@ Property = module.exports = function(key, data) {
     });
   } catch (_error) {
     error = _error;
-    reportFailure(error, {
+    throwFailure(error, {
       target: target,
       prop: prop
     });

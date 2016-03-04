@@ -5,6 +5,7 @@
   "main": "js/src/index.js",
   "dependencies": {
     "computed-var": "aleclarson/computed-var#1.0.0",
+    "failure": "aleclarson/failure#1.0.0",
     "has": "^1.0.1",
     "in-array": "^0.1.0",
     "is-node-env": "aleclarson/is-node-env#1.0.0",

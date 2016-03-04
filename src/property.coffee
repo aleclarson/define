@@ -1,5 +1,6 @@
 
-reportFailure = require "report-failure"
+{ throwFailure } = require "failure"
+
 ComputedVar = require "computed-var"
 ReactiveVar = require "reactive-var"
 LazyVar = require "lazy-var"
@@ -88,39 +89,40 @@ Property = module.exports = (key, data) ->
   if prop.needsValue and !prop.value?
     return target
 
-  if prop.lazy instanceof Function
-    prop.value = LazyVar prop.lazy
-    delete prop.lazy
-
   if prop.get instanceof Function
+
     prop.writable = prop.set?
     getter = ->
       prop.get.call this
 
+  else if prop.set instanceof Function
+    throw Error "'set' cannot be defined without 'get'!"
+
   else if prop.reactive
     prop.writable = yes
-    prop.value = ReactiveVar prop.value
-    if prop.DEBUG
-      prop.value.name = prop.key
+    prop.value = new ReactiveVar prop.value
     getter = ->
       prop.value.get()
     prop.set = (newValue) ->
       prop.value.set newValue
 
-  else if (prop.value instanceof ComputedVar) or (prop.value instanceof LazyVar)
-    getter = ->
-      prop.value.get.call this
-    prop.set = (newValue, oldValue) ->
-      prop.value.set.call this, newValue, oldValue
-
-  else if prop.set instanceof Function
-    throw Error "'set' cannot be defined without 'get'."
-
   else
-    getter = ->
-      prop.value
-    prop.set = (newValue) ->
-      prop.value = newValue
+
+    if prop.lazy instanceof Function
+      prop.value = LazyVar prop.lazy
+      delete prop.lazy
+
+    if (prop.value instanceof ComputedVar) or (prop.value instanceof LazyVar)
+      getter = ->
+        prop.value.get.call this
+      prop.set = (newValue, oldValue) ->
+        prop.value.set.call this, newValue, oldValue
+
+    else
+      getter = ->
+        prop.value
+      prop.set = (newValue) ->
+        prop.value = newValue
 
   setter = createSetter getter, prop
 
@@ -131,7 +133,7 @@ Property = module.exports = (key, data) ->
       get: getter
       set: setter
   catch error
-    reportFailure error, { target, prop }
+    throwFailure error, { target, prop }
 
   if has prop, "assign"
     target[prop.key] = prop.assign
