@@ -1,7 +1,6 @@
 
 require "lotus-require"
 
-Property = require "./property"
 mirror = require "./mirror"
 define = require "./define"
 mixin = require "./mixin"

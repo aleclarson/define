@@ -1,8 +1,6 @@
-var Property, define, defineEnumerable, getOption, i, j, key, len, len1, mirror, mixin, ref, ref1, scope, setOption, target;
+var define, defineEnumerable, getOption, i, j, key, len, len1, mirror, mixin, ref, ref1, scope, setOption, target;
 
 require("lotus-require");
-
-Property = require("./property");
 
 mirror = require("./mirror");
 

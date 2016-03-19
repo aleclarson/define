@@ -1,30 +1,25 @@
 
 { throwFailure } = require "failure"
 
-ComputedVar = require "computed-var"
-ReactiveVar = require "reactive-var"
-LazyVar = require "lazy-var"
-has = require "has"
+isDev = require "isDev"
 
+Getter = require "./getter"
+Setter = require "./setter"
 scope = require "./scope"
 
-Property = module.exports = (key, data) ->
+Property = module.exports
 
-  #
-  # Argument validation
-  #
+Property.define = (key, data) ->
 
-  if key? and key.constructor is Object
+  if key and (key.constructor is Object)
     props = key
-    Property key, data for key, data of props
+    Property.define key, data for key, data of props
     return yes
 
   if typeof key isnt "string"
-    error = TypeError "'key' must be a String."
-    error.code = "BAD_KEY_TYPE"
-    throw error
+    throw TypeError "'key' must be a String!"
 
-  if data? and data.constructor is Object
+  if data and (data.constructor is Object)
     options = data
 
     # If the 'options' object is empty, it becomes 'options.value'
@@ -33,116 +28,32 @@ Property = module.exports = (key, data) ->
 
   else
     options = {}
-    options.value = data if has arguments, 1
-
-  #
-  # Target validation
-  #
+    if arguments.length > 1
+      options.value = data
 
   target = scope.getTarget()
 
-  if !target?
-    error = Error "No target has been set."
-    error.code = "MISSING_TARGET"
-    throw error
-
-  #
-  # Options setup
-  #
+  unless target?
+    throw Error "Cannot define without a target!"
 
   options = scope.createOptions options
 
-  for option, defaultValue of Property.defaultValues
-    options[option] = defaultValue unless has options, option
+  for option, defaultValue of Property.optionDefaults
+    options[option] = defaultValue if options[option] is undefined
 
-  if options.frozen?
-    options.configurable = options.writable = not options.frozen
-    delete options.frozen
-
-  #
-  # Options processing
-  #
+  if options.frozen is yes
+    options.configurable = options.writable = no
 
   prop = { key }
 
   for option in Property.validOptions
-    prop[option] = options[option] if has options, option
+    prop[option] = options[option]
 
-  if isPrototype target
-
-    options =
-      enumerable: prop.enumerable
-      configurable: prop.configurable
-
-    if has prop, "get"
-      options.get = prop.get
-      options.set = prop.set if has prop, "set"
-
-    else
-      options.value = prop.value
-      options.writable = prop.writable
-
-    Object.defineProperty target, key, options
-
-    return target
-
-  if prop.needsValue and !prop.value?
-    return target
-
-  if prop.get instanceof Function
-
-    prop.writable = prop.set?
-    getter = ->
-      prop.get.call this
-
-  else if prop.set instanceof Function
-    throw Error "'set' cannot be defined without 'get'!"
-
-  else if prop.reactive
-    prop.writable = yes
-    prop.value = new ReactiveVar prop.value
-    getter = ->
-      prop.value.get()
-    prop.set = (newValue) ->
-      prop.value.set newValue
-
-  else
-
-    if prop.lazy instanceof Function
-      prop.value = LazyVar prop.lazy
-      delete prop.lazy
-
-    if (prop.value instanceof ComputedVar) or (prop.value instanceof LazyVar)
-      getter = ->
-        prop.value.get.call this
-      prop.set = (newValue, oldValue) ->
-        prop.value.set.call this, newValue, oldValue
-
-    else
-      getter = ->
-        prop.value
-      prop.set = (newValue) ->
-        prop.value = newValue
-
-  setter = createSetter getter, prop
-
-  try
-    Object.defineProperty target, prop.key,
-      enumerable: prop.enumerable
-      configurable: prop.configurable
-      get: getter
-      set: setter
-  catch error
-    throwFailure error, { target, prop }
-
-  if has prop, "assign"
-    target[prop.key] = prop.assign
-    delete prop.assign
-
-  if prop.DEBUG?
-    global.DEBUG = { prop, target, getter, setter }
-
-  target
+  if isDev
+    try defineProperty.call prop, target
+    catch error then throwFailure error, { target, prop }
+  else defineProperty.call prop, target
+  return target
 
 Property.validOptions = [
   "value"
@@ -158,62 +69,52 @@ Property.validOptions = [
   "frozen"
   "reactive"
   "needsValue"
-  "DEBUG"
 ]
 
-Property.defaultValues =
+Property.optionDefaults =
   configurable: yes
   enumerable: yes
   writable: yes
 
-createSetter = (getter, prop) ->
+defineProperty = (target) ->
 
-  unless prop.writable
-    deleteKeys prop, "set", "didSet", "willSet"
-    return setter = -> throw Error "'#{prop.key}' is not writable."
+  if isPrototype target
+    definePrototype.call this, target
+    return
 
-  willSet = prop.willSet?
-  didSet = prop.didSet?
+  if @needsValue
+    return if @value is undefined
 
-  if willSet and didSet
-    return setter = (newValue) ->
-      oldValue = getter.call this
-      newValue = prop.willSet.call this, newValue, oldValue
-      prop.set.call this, newValue, oldValue
-      prop.didSet.call this, newValue, oldValue
+  Object.defineProperty target, @key, {
+    get: @getter = Getter this
+    set: @setter = Setter this
+    @enumerable
+    @configurable
+  }
 
-  else if willSet
-    return setter = (newValue) ->
-      oldValue = getter.call this
-      newValue = prop.willSet.call this, newValue, oldValue
-      prop.set.call this, newValue, oldValue
-
-  else if didSet
-    return setter = (newValue) ->
-      oldValue = getter.call this
-      prop.set.call this, newValue, oldValue
-      prop.didSet.call this, newValue, oldValue
-
-  else
-    return setter = (newValue) ->
-      prop.set.call this, newValue, getter.call this
-
-deleteKeys = (obj, keys...) ->
-  delete obj[key] for key in keys
+  if @assign isnt undefined
+    target[@key] = @assign
+    @assign = undefined
+  return
 
 isPrototype = (value) ->
   return no unless value instanceof Object
-  value is value.constructor.prototype
+  return value is value.constructor.prototype
 
-isNameableFunction = (value, key) ->
-  value instanceof Function and
-  value.name is "" and
-  startsWithLetter(key) and
-  isUppercase(key[0])
+definePrototype = (target) ->
 
-isUppercase = (string) ->
-  string is string.toUpperCase()
+  options = {
+    @enumerable
+    @configurable
+  }
 
-startsWithLetter = (string) ->
-  code = string.charCodeAt 0
-  code? and (code >= 65 and code <= 90) or (code >= 97 and code <= 122)
+  if @get
+    options.get = @get
+    options.set = @set if @set
+
+  else
+    options.value = @value
+    options.writable = @writable
+
+  Object.defineProperty target, @key, options
+  return

@@ -3,13 +3,14 @@ var mixin, scope;
 scope = require("./scope");
 
 mixin = module.exports = function(closure) {
-  return function() {
-    var target;
-    target = scope.getTarget();
+  return function(target) {
+    if (target == null) {
+      target = scope.getTarget();
+    }
     scope.push(target);
-    Array.prototype.unshift.call(arguments, this);
-    closure.apply(scope.define, arguments);
+    closure.call(scope.define);
     scope.pop();
+    return target;
   };
 };
 

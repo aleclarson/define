@@ -1,6 +1,4 @@
 
-has = require "has"
-
 define = require "../.."
 
 describe "define(Object.Kind, Function)", ->
@@ -92,8 +90,8 @@ describe "define(String)", ->
   it "sets the value to undefined", ->
     obj = define {}, -> @ "foo"
     expect(obj.foo).toBe undefined
-    expect(has obj, "foo").toBe yes
-    expect(has obj, "foo").toBe yes
+    expect(obj.hasOwnProperty "foo").toBe yes
+    expect(obj.hasOwnProperty "foo").toBe yes
 
   it "returns the mutable property", ->
     obj = {}

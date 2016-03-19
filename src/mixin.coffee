@@ -1,10 +1,9 @@
 
 scope = require "./scope"
 
-mixin = module.exports = (closure) -> () ->
-  target = scope.getTarget()
+mixin = module.exports = (closure) -> (target) ->
+  target ?= scope.getTarget()
   scope.push target
-  Array::unshift.call arguments, this
-  closure.apply scope.define, arguments
+  closure.call scope.define
   scope.pop()
-  return
+  target

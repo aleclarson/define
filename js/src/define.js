@@ -20,13 +20,13 @@ define = module.exports = function(target, data) {
     throw error;
   }
   ctr = target.constructor;
-  if (arguments.hasOwnProperty(1)) {
+  if (arguments.length > 1) {
     if (ctr === String) {
-      return Property(target, data);
+      return Property.define(target, data);
     }
   } else {
     if ((ctr === String) || (ctr === Object)) {
-      return Property(target);
+      return Property.define(target);
     }
     if (ctr === Function) {
       return scope.call(target);
@@ -48,9 +48,9 @@ define = module.exports = function(target, data) {
   if (ctr === Function) {
     data.call(scope.define);
   } else if (ctr === Object) {
-    Property(data);
+    Property.define(data);
   } else if (ctr === String) {
-    Property(data, arguments[2]);
+    Property.define(data, arguments[2]);
   }
   scope.pop();
   return target;

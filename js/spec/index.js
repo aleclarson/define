@@ -1,6 +1,4 @@
-var define, has;
-
-has = require("has");
+var define;
 
 define = require("../..");
 
@@ -166,8 +164,8 @@ describe("define(String)", function() {
       return this("foo");
     });
     expect(obj.foo).toBe(void 0);
-    expect(has(obj, "foo")).toBe(true);
-    return expect(has(obj, "foo")).toBe(true);
+    expect(obj.hasOwnProperty("foo")).toBe(true);
+    return expect(obj.hasOwnProperty("foo")).toBe(true);
   });
   return it("returns the mutable property", function() {
     var obj;

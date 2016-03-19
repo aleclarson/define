@@ -13,12 +13,14 @@ define = module.exports = (target, data) ->
 
   ctr = target.constructor
 
-  if arguments.hasOwnProperty 1
-    return Property target, data if ctr is String
+  if arguments.length > 1
+    return Property.define target, data if ctr is String
 
   else
-    return Property target if (ctr is String) or (ctr is Object)
-    return scope.call target if ctr is Function
+    if (ctr is String) or (ctr is Object)
+      return Property.define target
+    if ctr is Function
+      return scope.call target
 
   unless isDataValid data
     global.failure ?= { value: data, isValid: isDataValid }
@@ -34,10 +36,10 @@ define = module.exports = (target, data) ->
     data.call scope.define
 
   else if ctr is Object
-    Property data
+    Property.define data
 
   else if ctr is String
-    Property data, arguments[2]
+    Property.define data, arguments[2]
 
   scope.pop()
 
