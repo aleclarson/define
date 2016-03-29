@@ -1,6 +1,5 @@
 {
   "name": "define",
-  "description": "An alternate style for defining properties with custom behavior.",
   "version": "1.0.0",
   "main": "js/src/index.js",
   "dependencies": {
@@ -8,10 +7,12 @@
     "failure": "aleclarson/failure#1.0.0",
     "in-array": "^0.1.0",
     "isDev": "aleclarson/isDev#1.0.0",
+    "isProto": "aleclarson/isProto#1.0.0",
     "lazy-var": "aleclarson/lazy-var#1.0.0",
-    "lotus-require": "aleclarson/lotus-require#1.0.0",
     "named-function": "aleclarson/named-function#1.0.3",
-    "reactive-var": "aleclarson/reactive-var#1.0.6"
+    "reactive-var": "aleclarson/reactive-var#1.0.6",
+    "setType": "aleclarson/setType#1.0.0",
+    "type-utils": "aleclarson/type-utils#1.0.0"
   },
   "repository": {
     "type": "git",

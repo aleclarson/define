@@ -1,40 +1,46 @@
 
-emptyFunction = require "emptyFunction"
-isDev = require "isDev"
+{ assertType } = require "type-utils"
 
 module.exports =
-Setter = (prop) ->
-  return EmptySetter unless prop.writable
-  setter = getType(prop)(prop)
-  return (newValue) ->
-    setter.call this, newValue, prop.getter.call this
+Setter = (prop, get, set) ->
 
-getType = (prop) ->
+  assertType get, Function
+  assertType set, Function
+
+  needsGet = set.length > 1
+  setter = set
+
   if prop.willSet
+
+    unless needsGet
+      needsGet = prop.willSet.length > 1
+
     if prop.didSet
-      WillDidSetter
-    else WillSetter
+
+      unless needsGet
+        needsGet = prop.didSet.length > 1
+
+      setter = (newValue, oldValue) ->
+        newValue = prop.willSet.call this, newValue, oldValue
+        set.call this, newValue, oldValue
+        prop.didSet.call this, newValue, oldValue
+
+    else
+      setter = (newValue, oldValue) ->
+        newValue = prop.willSet.call this, newValue, oldValue
+        set.call this, newValue, oldValue
+
   else if prop.didSet
-    DidSetter
-  else SimpleSetter
 
-SimpleSetter = (prop) -> (newValue, oldValue) ->
-  prop.set.call this, newValue, oldValue
+    unless needsGet
+      needsGet = prop.didSet.length > 1
 
-EmptySetter = (prop) ->
-  prop.willSet = prop.set = prop.didSet = undefined
-  return emptyFunction unless isDev
-  return -> throw Error "'#{prop.key}' is not writable."
+    setter = (newValue, oldValue) ->
+      set.call this, newValue, oldValue
+      prop.didSet.call this, newValue, oldValue
 
-WillSetter = (prop) -> (newValue, oldValue) ->
-  newValue = prop.willSet.call this, newValue, oldValue
-  prop.set.call this, newValue, oldValue
+  if needsGet then (newValue) ->
+    setter.call this, newValue, get.call this
 
-DidSetter = (prop) -> (newValue, oldValue) ->
-  prop.set.call this, newValue, oldValue
-  prop.didSet.call this, newValue, oldValue
-
-WillDidSetter = (prop) -> (newValue, oldValue) ->
-  newValue = prop.willSet.call this, newValue, oldValue
-  prop.set.call this, newValue, oldValue
-  prop.didSet.call this, newValue, oldValue
+  else (newValue) ->
+    setter.call this, newValue

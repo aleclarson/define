@@ -1,120 +1,222 @@
 
-{ throwFailure } = require "failure"
+{ assertType } = require "type-utils"
 
+NamedFunction = require "named-function"
+emptyFunction = require "emptyFunction"
+ReactiveVar = require "reactive-var"
+LazyVar = require "lazy-var"
+setType = require "setType"
+isProto = require "isProto"
 isDev = require "isDev"
+guard = require "guard"
 
-Getter = require "./getter"
 Setter = require "./setter"
-scope = require "./scope"
 
-Property = module.exports
+Property = NamedFunction "Property", (config) ->
 
-Property.define = (key, data) ->
+  config = {} unless config
 
-  if key and (key.constructor is Object)
-    props = key
-    Property.define key, data for key, data of props
-    return yes
+  assertType config, Object, "config"
 
-  if typeof key isnt "string"
-    throw TypeError "'key' must be a String!"
-
-  if data and (data.constructor is Object)
-    options = data
-
-    # If the 'options' object is empty, it becomes 'options.value'
-    if Object.keys(options).length is 0
-      options = value: options
-
-  else
-    options = {}
-    if arguments.length > 1
-      options.value = data
-
-  target = scope.getTarget()
-
-  unless target?
-    throw Error "Cannot define without a target!"
-
-  options = scope.createOptions options
-
-  for option, defaultValue of Property.optionDefaults
-    options[option] = defaultValue if options[option] is undefined
-
-  if options.frozen is yes
-    options.configurable = options.writable = no
-
-  prop = { key }
-
-  for option in Property.validOptions
-    prop[option] = options[option]
+  if config.needsValue and (config.value is undefined)
+    return null
 
   if isDev
-    try defineProperty.call prop, target
-    catch error then throwFailure error, { target, prop }
-  else defineProperty.call prop, target
-  return target
+    self =
+      simple: yes
+      writable: config.writable ?= yes
+      enumerable: config.enumerable
+      configurable: config.configurable ?= yes
+    self.DEBUG = yes if config.DEBUG
+  else
+    self =
+      simple: yes
+      writable: yes
+      enumerable: yes
+      configurable: yes
 
-Property.validOptions = [
-  "value"
-  "assign"
-  "lazy"
-  "get"
-  "set"
-  "willSet"
-  "didSet"
-  "configurable"
-  "enumerable"
-  "writable"
-  "frozen"
-  "reactive"
-  "needsValue"
-]
+  setType self, Property
 
-Property.optionDefaults =
-  configurable: yes
-  enumerable: yes
-  writable: yes
+  parseConfig.call self, config
 
-defineProperty = (target) ->
+  return self
 
-  if isPrototype target
-    definePrototype.call this, target
+module.exports = Property
+
+Property::define = (target, key) ->
+
+  if isProto target
+    defineProto.call this, target, key
     return
 
-  if @needsValue
-    return if @value is undefined
+  { simple, enumerable } = this
 
-  Object.defineProperty target, @key, {
-    get: @getter = Getter this
-    set: @setter = Setter this
-    @enumerable
-    @configurable
-  }
+  if isDev
+    if enumerable is undefined
+      enumerable = key[0] isnt "_"
+    unless enumerable
+      simple = no
+  else
+    enumerable = yes
 
-  if @assign isnt undefined
-    target[@key] = @assign
-    @assign = undefined
-  return
-
-isPrototype = (value) ->
-  return no unless value instanceof Object
-  return value is value.constructor.prototype
-
-definePrototype = (target) ->
-
-  options = {
-    @enumerable
-    @configurable
-  }
+  if simple
+    target[key] = @value
+    return
 
   if @get
-    options.get = @get
-    options.set = @set if @set
+    get = @get
+
+  else if @lazy
+
+    value = LazyVar { @reactive, initValue: @lazy }
+
+    get = ->
+      value.get.call this
+
+    getSafely = ->
+      value._value
+
+  else if @reactive
+
+    value = new ReactiveVar @value
+
+    get = ->
+      value.get()
+
+    getSafely = ->
+      value.curValue
 
   else
-    options.value = @value
-    options.writable = @writable
 
-  Object.defineProperty target, @key, options
+    value = @value
+
+    get = ->
+      value
+
+  unless @writable
+    if isDev then set = -> throw Error "'#{key}' is not writable."
+    else set = emptyFunction
+
+  else if @get
+    if @set then set = @set
+    else set = -> throw Error "'#{key}' is not writable."
+
+  else if @lazy
+    set = (newValue) ->
+      value.set.call this, newValue
+
+  else if @reactive
+    set = (newValue) ->
+      value.set newValue
+
+  else
+    set = (newValue) ->
+      value = newValue
+
+  options = {
+    get
+    set: Setter this, getSafely or get, set
+    enumerable
+    @configurable
+  }
+
+  if @DEBUG
+    console.log "\n"
+    console.log "options.get = " + options.get.toString()
+    console.log "options.set = " + options.set.toString()
+    console.log "set = " + set.toString()
+
+  Object.defineProperty target, key, options
+  return
+
+#
+# Helpers
+#
+
+parseConfig = (config) ->
+
+  if isDev
+
+    if config.frozen
+      @simple = no
+      @writable = no
+      @configurable = no
+
+    else if config.enumerable is no
+      @simple = no
+
+    else if config.configurable is no
+      @simple = no
+
+    else if config.writable is no
+      @simple = no
+
+  if config.get
+    @simple = no
+    @get = config.get
+
+  else if config.set
+    throw Error "Cannot define 'set' without 'get'!"
+
+  else if config.lazy
+    @simple = no
+    @lazy = config.lazy
+    @reactive = yes if config.reactive
+
+  else
+    hasValue = yes
+    @value = config.value
+
+    if config.reactive
+      @simple = no
+      @reactive = yes
+
+  if @writable
+
+    if hasValue
+      @set = (newValue) =>
+        @value = newValue
+
+    if config.set
+      @simple = no
+      @set = config.set
+
+    if config.willSet
+      @simple = no
+      @willSet = config.willSet
+
+    if config.didSet
+      @simple = no
+      @didSet = config.didSet
+
+  else if config.set
+    throw Error "Cannot define 'set' when 'writable' is false!"
+
+  else if config.willSet
+    throw Error "Cannot define 'willSet' when 'writable' is false!"
+
+  else if config.didSet
+    throw Error "Cannot define 'didSet' when 'writable' is false!"
+
+  return
+
+defineProto = (target, key) ->
+
+  if @get
+    Object.defineProperty target, key, {
+      @get
+      set: @set or -> throw Error "'#{key}' is not writable."
+      @enumerable
+      @configurable
+    }
+
+  else if isDev and @lazy
+    throw Error "Cannot define 'lazy' when the target is a prototype!"
+
+  else if isDev and @reactive
+    throw Error "Cannot define 'reactive' when the target is a prototype!"
+
+  else
+    target[key] = @value
+
   return

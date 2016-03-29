@@ -1,56 +1,52 @@
 
+{ isType, isConstructor, Kind } = require "type-utils"
+
 Property = require "./property"
-inArray = require "in-array"
-scope = require "./scope"
 
-define = module.exports = (target, data) ->
+targetTypes = [ Kind(Object), null ]
 
-  unless isTargetValid target
-    global.failure ?= { value: target, isValid: isTargetValid }
-    error = TypeError "'target' has an unexpected type: '#{target?.constructor}'"
-    error.code = "BAD_TARGET_TYPE"
-    throw error
+define = (target) ->
 
-  ctr = target.constructor
+  return unless target
 
-  if arguments.length > 1
-    return Property.define target, data if ctr is String
+  return if arguments.length is 1
 
-  else
-    if (ctr is String) or (ctr is Object)
-      return Property.define target
-    if ctr is Function
-      return scope.call target
+  return unless isType target, targetTypes
 
-  unless isDataValid data
-    global.failure ?= { value: data, isValid: isDataValid }
-    error = TypeError "'data' has an unexpected type: '#{data?.constructor}'"
-    error.code = "BAD_DATA_TYPE"
-    throw error
+  if arguments.length is 2
+    for key, config of arguments[1]
+      config = parseConfig config
+      prop = Property config
+      continue unless prop
+      prop.define target, key
+    return
 
-  scope.push target
+  if typeof arguments[1] is "string"
+    config = parseConfig arguments[2]
+    prop = Property config
+    return unless prop
+    prop.define target, arguments[1]
+    return
 
-  ctr = data.constructor
+  if arguments[2].constructor is Object
+    configMixin = ConfigMixin arguments[1]
+    for key, config of arguments[2]
+      config = parseConfig config
+      configMixin config
+      prop = Property config
+      continue unless prop
+      prop.define target, key
+    return
 
-  if ctr is Function
-    data.call scope.define
+module.exports = define
 
-  else if ctr is Object
-    Property.define data
+parseConfig = (config) ->
+  return config if isConstructor config, Object
+  return { value: config }
 
-  else if ctr is String
-    Property.define data, arguments[2]
-
-  scope.pop()
-
-  target
-
-isDataValid = (value) ->
-  value? and inArray [ String, Object, Function ], value.constructor
-
-isTargetValid = (value) ->
-  value? and (
-    (value.constructor is String) or
-    (value.constructor is undefined) or
-    (value.constructor instanceof Object)
-  )
+ConfigMixin = (mixin) ->
+  return emptyFunction unless mixin
+  return emptyFunction if mixin.constructor isnt Object
+  return (config) ->
+    config[key] = value for key, value of mixin when config[key] is undefined
+    return
