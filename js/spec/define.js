@@ -140,6 +140,43 @@ describe("define()", function() {
       return expect(setSpy.calls.argsFor(0)).toEqual([2, 1]);
     });
   });
+  describe("options.willSet", function() {
+    it("is called before 'options.set'", function() {
+      var obj, spy;
+      obj = {};
+      spy = jasmine.createSpy();
+      define(obj, "key", {
+        get: function() {
+          return 1;
+        },
+        set: spy,
+        willSet: function(newValue, oldValue) {
+          spy(newValue, oldValue);
+          return newValue + oldValue;
+        }
+      });
+      obj.key = 2;
+      expect(spy.calls.argsFor(0)).toEqual([2, 1]);
+      expect(spy.calls.argsFor(1)).toEqual([3, 1]);
+      return expect(spy.calls.count()).toBe(2);
+    });
+    return it("can be used with 'options.value'", function() {
+      var obj, spy;
+      obj = {};
+      spy = jasmine.createSpy();
+      define(obj, "key", {
+        value: 1,
+        willSet: function(newValue, oldValue) {
+          spy(newValue, oldValue);
+          return newValue + oldValue;
+        }
+      });
+      obj.key = 2;
+      expect(spy.calls.count()).toBe(1);
+      expect(spy.calls.argsFor(0)).toEqual([2, 1]);
+      return expect(obj.key).toBe(3);
+    });
+  });
   describe("options.frozen", function() {
     var obj;
     obj = null;
@@ -190,6 +227,86 @@ describe("define()", function() {
       expect(spy.calls.count()).toBe(0);
       expect(obj.foo).toBe(1);
       return expect(spy.calls.count()).toBe(1);
+    });
+  });
+  describe("options.reactive", function() {
+    var Tracker;
+    Tracker = require("tracker");
+    it("interfaces with a ReactiveVar using a getter and setter", function() {
+      var deferred, obj, spy;
+      obj = {};
+      define(obj, "key", {
+        value: 1,
+        reactive: true
+      });
+      spy = jasmine.createSpy();
+      Tracker.autorun(function() {
+        return spy(obj.key);
+      });
+      obj.key = 2;
+      deferred = Q.defer();
+      Tracker.afterFlush(function() {
+        expect(spy.calls.count()).toBe(2);
+        expect(spy.calls.argsFor(0)).toEqual([1]);
+        expect(spy.calls.argsFor(1)).toEqual([2]);
+        return deferred.fulfill();
+      });
+      return deferred.promise;
+    });
+    it("is non-reactive when accessing the 'oldValue' for 'options.willSet'", function() {
+      var autorunSpy, deferred, obj, willSetSpy;
+      obj = {};
+      willSetSpy = jasmine.createSpy();
+      define(obj, "key", {
+        value: 1,
+        reactive: true,
+        willSet: function(newValue, oldValue) {
+          willSetSpy(newValue, oldValue);
+          return newValue;
+        }
+      });
+      autorunSpy = jasmine.createSpy();
+      Tracker.autorun(function() {
+        autorunSpy();
+        return obj.key = 2;
+      });
+      obj.key = 3;
+      deferred = Q.defer();
+      Tracker.afterFlush(function() {
+        expect(autorunSpy.calls.count()).toBe(1);
+        expect(willSetSpy.calls.count()).toBe(2);
+        expect(willSetSpy.calls.argsFor(0)).toEqual([2, 1]);
+        expect(willSetSpy.calls.argsFor(1)).toEqual([3, 2]);
+        return deferred.fulfill();
+      });
+      return deferred.promise;
+    });
+    return it("works with 'options.didSet' as expected", function() {
+      var autorunSpy, deferred, didSetSpy, obj;
+      obj = {};
+      didSetSpy = jasmine.createSpy();
+      define(obj, "key", {
+        value: 1,
+        reactive: true,
+        didSet: function(newValue, oldValue) {
+          return didSetSpy(newValue, oldValue);
+        }
+      });
+      autorunSpy = jasmine.createSpy();
+      Tracker.autorun(function() {
+        return autorunSpy(obj.key);
+      });
+      obj.key = 2;
+      deferred = Q.defer();
+      Tracker.afterFlush(function() {
+        expect(didSetSpy.calls.count()).toBe(1);
+        expect(didSetSpy.calls.argsFor(0)).toEqual([2, 1]);
+        expect(autorunSpy.calls.count()).toBe(2);
+        expect(autorunSpy.calls.argsFor(0)).toEqual([1]);
+        expect(autorunSpy.calls.argsFor(1)).toEqual([2]);
+        return deferred.fulfill();
+      });
+      return deferred.promise;
     });
   });
   describe("calling with a prototype as the target", function() {

@@ -129,6 +129,55 @@ describe "define()", ->
       expect setSpy.calls.argsFor 0
         .toEqual [ 2, 1 ]
 
+  describe "options.willSet", ->
+
+    it "is called before 'options.set'", ->
+
+      obj = {}
+
+      spy = jasmine.createSpy()
+
+      define obj, "key",
+        get: -> 1
+        set: spy
+        willSet: (newValue, oldValue) ->
+          spy newValue, oldValue
+          newValue + oldValue
+
+      obj.key = 2
+
+      expect spy.calls.argsFor 0
+        .toEqual [ 2, 1 ]
+
+      expect spy.calls.argsFor 1
+        .toEqual [ 3, 1 ]
+
+      expect spy.calls.count()
+        .toBe 2
+
+    it "can be used with 'options.value'", ->
+
+      obj = {}
+
+      spy = jasmine.createSpy()
+
+      define obj, "key",
+        value: 1
+        willSet: (newValue, oldValue) ->
+          spy newValue, oldValue
+          newValue + oldValue
+
+      obj.key = 2
+
+      expect spy.calls.count()
+        .toBe 1
+
+      expect spy.calls.argsFor 0
+        .toEqual [ 2, 1 ]
+
+      expect obj.key
+        .toBe 3
+
   describe "options.frozen", ->
 
     obj = null
@@ -166,6 +215,126 @@ describe "define()", ->
         .toBe 1
       expect spy.calls.count()
         .toBe 1
+
+  describe "options.reactive", ->
+
+    Tracker = require "tracker"
+
+    it "interfaces with a ReactiveVar using a getter and setter", ->
+
+      obj = {}
+
+      define obj, "key", { value: 1, reactive: yes }
+
+      spy = jasmine.createSpy()
+
+      Tracker.autorun ->
+
+        spy obj.key
+
+      obj.key = 2
+
+      deferred = Q.defer()
+
+      Tracker.afterFlush ->
+
+        expect spy.calls.count()
+          .toBe 2
+
+        expect spy.calls.argsFor 0
+          .toEqual [ 1 ]
+
+        expect spy.calls.argsFor 1
+          .toEqual [ 2 ]
+
+        deferred.fulfill()
+
+      deferred.promise
+
+    it "is non-reactive when accessing the 'oldValue' for 'options.willSet'", ->
+
+      obj = {}
+
+      willSetSpy = jasmine.createSpy()
+
+      define obj, "key",
+        value: 1
+        reactive: yes
+        willSet: (newValue, oldValue) ->
+          willSetSpy newValue, oldValue
+          return newValue
+
+      autorunSpy = jasmine.createSpy()
+
+      Tracker.autorun ->
+
+        autorunSpy()
+
+        obj.key = 2 # This will only be called once, because the setter is non-reactive.
+
+      obj.key = 3
+
+      deferred = Q.defer()
+
+      Tracker.afterFlush ->
+
+        expect autorunSpy.calls.count()
+          .toBe 1
+
+        expect willSetSpy.calls.count()
+          .toBe 2
+
+        expect willSetSpy.calls.argsFor 0
+          .toEqual [ 2, 1 ]
+
+        expect willSetSpy.calls.argsFor 1
+          .toEqual [ 3, 2 ]
+
+        deferred.fulfill()
+
+      deferred.promise
+
+    it "works with 'options.didSet' as expected", ->
+
+      obj = {}
+
+      didSetSpy = jasmine.createSpy()
+
+      define obj, "key",
+        value: 1
+        reactive: yes
+        didSet: (newValue, oldValue) ->
+          didSetSpy newValue, oldValue
+
+      autorunSpy = jasmine.createSpy()
+
+      Tracker.autorun ->
+        autorunSpy obj.key
+
+      obj.key = 2
+
+      deferred = Q.defer()
+
+      Tracker.afterFlush ->
+
+        expect didSetSpy.calls.count()
+          .toBe 1
+
+        expect didSetSpy.calls.argsFor 0
+          .toEqual [ 2, 1 ]
+
+        expect autorunSpy.calls.count()
+          .toBe 2
+
+        expect autorunSpy.calls.argsFor 0
+          .toEqual [ 1 ]
+
+        expect autorunSpy.calls.argsFor 1
+          .toEqual [ 2 ]
+
+        deferred.fulfill()
+
+      deferred.promise
 
   describe "calling with a prototype as the target", ->
 

@@ -1,13 +1,14 @@
 
-{ assertType } = require "type-utils"
+require "isDev"
 
-NamedFunction = require "named-function"
+{ assert, assertType } = require "type-utils"
+
+NamedFunction = require "NamedFunction"
 emptyFunction = require "emptyFunction"
 ReactiveVar = require "reactive-var"
 LazyVar = require "lazy-var"
 setType = require "setType"
 isProto = require "isProto"
-isDev = require "isDev"
 guard = require "guard"
 
 Setter = require "./setter"
@@ -23,11 +24,11 @@ Property = NamedFunction "Property", (config) ->
 
   if isDev
     self =
+      DEBUG: config.DEBUG is yes
       simple: yes
       writable: config.writable ?= yes
       enumerable: config.enumerable
       configurable: config.configurable ?= yes
-    self.DEBUG = yes if config.DEBUG
   else
     self =
       simple: yes
@@ -37,7 +38,7 @@ Property = NamedFunction "Property", (config) ->
 
   setType self, Property
 
-  parseConfig.call self, config
+  self._parseConfig config
 
   return self
 
@@ -45,22 +46,20 @@ module.exports = Property
 
 Property::define = (target, key) ->
 
-  if isProto target
-    defineProto.call this, target, key
-    return
-
   { simple, enumerable } = this
 
-  if isDev
-    if enumerable is undefined
-      enumerable = key[0] isnt "_"
-    unless enumerable
-      simple = no
-  else
+  unless isDev
     enumerable = yes
+  else
+    enumerable = key[0] isnt "_" if enumerable is undefined
+    simple = no unless enumerable
 
   if simple
     target[key] = @value
+    return
+
+  if isProto target
+    @_defineProto target, key, enumerable
     return
 
   if @get
@@ -94,12 +93,11 @@ Property::define = (target, key) ->
       value
 
   unless @writable
-    if isDev then set = -> throw Error "'#{key}' is not writable."
-    else set = emptyFunction
+    set = @_makeEmptySetter key
 
   else if @get
     if @set then set = @set
-    else set = -> throw Error "'#{key}' is not writable."
+    else set = @_makeEmptySetter key
 
   else if @lazy
     set = (newValue) ->
@@ -113,110 +111,114 @@ Property::define = (target, key) ->
     set = (newValue) ->
       value = newValue
 
-  options = {
+  if @DEBUG
+    GLOBAL.DEFINED ?= []
+    GLOBAL.DEFINED.push { value, get, set, enumerable, @configurable }
+
+  Object.defineProperty target, key, {
     get
     set: Setter this, getSafely or get, set
     enumerable
     @configurable
   }
 
-  if @DEBUG
-    console.log "\n"
-    console.log "options.get = " + options.get.toString()
-    console.log "options.set = " + options.set.toString()
-    console.log "set = " + set.toString()
-
-  Object.defineProperty target, key, options
   return
 
-#
-# Helpers
-#
+Object.defineProperties Property.prototype,
 
-parseConfig = (config) ->
+  _makeEmptySetter: value: (key) ->
+    if isDev then -> throw Error "'#{key}' is not writable."
+    else emptyFunction
 
-  if isDev
+  _parseConfig: value: (config) ->
 
-    if config.frozen
+    if isDev
+
+      if config.frozen
+        @simple = no
+        @writable = no
+        @configurable = no
+
+      else if config.enumerable is no
+        @simple = no
+
+      else if config.configurable is no
+        @simple = no
+
+      else if config.writable is no
+        @simple = no
+
+    if config.get
       @simple = no
-      @writable = no
-      @configurable = no
+      @get = config.get
 
-    else if config.enumerable is no
+    else if config.set
+      throw Error "Cannot define 'set' without 'get'!"
+
+    else if config.lazy
       @simple = no
+      @lazy = config.lazy
+      @reactive = yes if config.reactive
 
-    else if config.configurable is no
-      @simple = no
+    else
 
-    else if config.writable is no
-      @simple = no
+      if config.reactive
+        assert @writable, "Reactive values must be writable!"
+        @simple = no
+        @reactive = yes
 
-  if config.get
-    @simple = no
-    @get = config.get
+      @value = config.value
 
-  else if config.set
-    throw Error "Cannot define 'set' without 'get'!"
+    if @writable
 
-  else if config.lazy
-    @simple = no
-    @lazy = config.lazy
-    @reactive = yes if config.reactive
+      if config.set
+        @simple = no
+        @set = config.set
 
-  else
-    hasValue = yes
-    @value = config.value
+      if config.willSet
+        @simple = no
+        @willSet = config.willSet
 
-    if config.reactive
-      @simple = no
-      @reactive = yes
+      if config.didSet
+        @simple = no
+        @didSet = config.didSet
 
-  if @writable
+    else if config.set
+      throw Error "Cannot define 'set' when 'writable' is false!"
 
-    if hasValue
-      @set = (newValue) =>
-        @value = newValue
+    else if config.willSet
+      throw Error "Cannot define 'willSet' when 'writable' is false!"
 
-    if config.set
-      @simple = no
-      @set = config.set
+    else if config.didSet
+      throw Error "Cannot define 'didSet' when 'writable' is false!"
 
-    if config.willSet
-      @simple = no
-      @willSet = config.willSet
+    return
 
-    if config.didSet
-      @simple = no
-      @didSet = config.didSet
+  _defineProto: value: (target, key, enumerable) ->
 
-  else if config.set
-    throw Error "Cannot define 'set' when 'writable' is false!"
+    if isDev
 
-  else if config.willSet
-    throw Error "Cannot define 'willSet' when 'writable' is false!"
+      if @lazy
+        throw Error "Cannot define 'lazy' when the target is a prototype!"
 
-  else if config.didSet
-    throw Error "Cannot define 'didSet' when 'writable' is false!"
+      if @reactive
+        throw Error "Cannot define 'reactive' when the target is a prototype!"
 
-  return
+      if @willSet
+        throw Error "Cannot define 'willSet' when the target is a prototype!"
 
-defineProto = (target, key) ->
+      if @didSet
+        throw Error "Cannot define 'didSet' when the target is a prototype!"
 
-  if @get
-    Object.defineProperty target, key, {
-      @get
-      set: @set or -> throw Error "'#{key}' is not writable."
-      @enumerable
-      @configurable
-    }
+    { value, get, set, writable, configurable } = this
 
-  else if isDev and @lazy
-    throw Error "Cannot define 'lazy' when the target is a prototype!"
+    if get
+      set ?= @_makeEmptySetter key
+      descriptor = { get, set, enumerable, configurable }
 
-  else if isDev and @reactive
-    throw Error "Cannot define 'reactive' when the target is a prototype!"
+    else
+      assert isDev, "This should never be used out of __DEV__ mode!"
+      descriptor = { value, enumerable, writable, configurable }
 
-  else
-    target[key] = @value
-
-  return
+    Object.defineProperty target, key, descriptor
+    return
