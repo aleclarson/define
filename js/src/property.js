@@ -1,8 +1,10 @@
-var LazyVar, NamedFunction, Property, ReactiveVar, Setter, assert, assertType, emptyFunction, guard, isProto, ref, setType;
+var LazyVar, NamedFunction, Property, ReactiveVar, Setter, assert, assertType, emptyFunction, guard, isProto, ref, setType, throwFailure;
 
 require("isDev");
 
-ref = require("type-utils"), assert = ref.assert, assertType = ref.assertType;
+ref = require("type-utils"), assert = ref.assert, assertType = ref.assertType, setType = ref.setType;
+
+throwFailure = require("failure").throwFailure;
 
 NamedFunction = require("NamedFunction");
 
@@ -11,8 +13,6 @@ emptyFunction = require("emptyFunction");
 ReactiveVar = require("reactive-var");
 
 LazyVar = require("lazy-var");
-
-setType = require("setType");
 
 isProto = require("isProto");
 
@@ -53,7 +53,7 @@ Property = NamedFunction("Property", function(config) {
 module.exports = Property;
 
 Property.prototype.define = function(target, key) {
-  var enumerable, get, getSafely, set, simple, value;
+  var descriptor, enumerable, get, getSafely, set, simple, value;
   simple = this.simple, enumerable = this.enumerable;
   if (!isDev) {
     enumerable = true;
@@ -133,12 +133,25 @@ Property.prototype.define = function(target, key) {
       configurable: this.configurable
     });
   }
-  Object.defineProperty(target, key, {
+  descriptor = {
     get: get,
     set: Setter(this, getSafely || get, set),
     enumerable: enumerable,
     configurable: this.configurable
-  });
+  };
+  guard((function(_this) {
+    return function() {
+      return Object.defineProperty(target, key, descriptor);
+    };
+  })(this)).fail((function(_this) {
+    return function(error) {
+      return throwFailure(error, {
+        target: target,
+        key: key,
+        descriptor: descriptor
+      });
+    };
+  })(this));
 };
 
 Object.defineProperties(Property.prototype, {

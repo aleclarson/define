@@ -1,13 +1,13 @@
 
 require "isDev"
 
-{ assert, assertType } = require "type-utils"
+{ assert, assertType, setType } = require "type-utils"
+{ throwFailure } = require "failure"
 
 NamedFunction = require "NamedFunction"
 emptyFunction = require "emptyFunction"
 ReactiveVar = require "reactive-var"
 LazyVar = require "lazy-var"
-setType = require "setType"
 isProto = require "isProto"
 guard = require "guard"
 
@@ -115,12 +115,15 @@ Property::define = (target, key) ->
     GLOBAL.DEFINED ?= []
     GLOBAL.DEFINED.push { value, get, set, enumerable, @configurable }
 
-  Object.defineProperty target, key, {
+  descriptor = {
     get
     set: Setter this, getSafely or get, set
     enumerable
     @configurable
   }
+
+  guard => Object.defineProperty target, key, descriptor
+  .fail (error) => throwFailure error, { target, key, descriptor }
 
   return
 
