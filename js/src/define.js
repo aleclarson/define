@@ -1,10 +1,10 @@
-var ConfigMixin, Kind, Property, define, isConstructor, isType, parseConfig, ref, targetTypes;
+var ConfigMixin, Kind, Property, define, emptyFunction, isConstructor, isType, parseConfig, ref;
 
 ref = require("type-utils"), isType = ref.isType, isConstructor = ref.isConstructor, Kind = ref.Kind;
 
-Property = require("./property");
+emptyFunction = require("emptyFunction");
 
-targetTypes = [Kind(Object), null];
+Property = require("Property");
 
 define = function(target) {
   var config, configMixin, key, prop, ref1, ref2;
@@ -12,9 +12,6 @@ define = function(target) {
     return;
   }
   if (arguments.length === 1) {
-    return;
-  }
-  if (!isType(target, targetTypes)) {
     return;
   }
   if (arguments.length === 2) {

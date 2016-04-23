@@ -1,17 +1,14 @@
 
 { isType, isConstructor, Kind } = require "type-utils"
 
-Property = require "./property"
-
-targetTypes = [ Kind(Object), null ]
+emptyFunction = require "emptyFunction"
+Property = require "Property"
 
 define = (target) ->
 
   return unless target
 
   return if arguments.length is 1
-
-  return unless isType target, targetTypes
 
   if arguments.length is 2
     for key, config of arguments[1]
