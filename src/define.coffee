@@ -26,7 +26,7 @@ define = (target) ->
     return
 
   if arguments[2].constructor is Object
-    configMixin = ConfigMixin arguments[1]
+    configMixin = createConfigMixin arguments[1]
     for key, config of arguments[2]
       config = parseConfig config
       configMixin config
@@ -41,7 +41,7 @@ parseConfig = (config) ->
   return config if isConstructor config, Object
   return { value: config }
 
-ConfigMixin = (mixin) ->
+createConfigMixin = (mixin) ->
   return emptyFunction unless mixin
   return emptyFunction if mixin.constructor isnt Object
   return (config) ->

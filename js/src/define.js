@@ -1,4 +1,4 @@
-var ConfigMixin, Kind, Property, define, emptyFunction, isConstructor, isType, parseConfig, ref;
+var Kind, Property, createConfigMixin, define, emptyFunction, isConstructor, isType, parseConfig, ref;
 
 ref = require("type-utils"), isType = ref.isType, isConstructor = ref.isConstructor, Kind = ref.Kind;
 
@@ -37,7 +37,7 @@ define = function(target) {
     return;
   }
   if (arguments[2].constructor === Object) {
-    configMixin = ConfigMixin(arguments[1]);
+    configMixin = createConfigMixin(arguments[1]);
     ref2 = arguments[2];
     for (key in ref2) {
       config = ref2[key];
@@ -63,7 +63,7 @@ parseConfig = function(config) {
   };
 };
 
-ConfigMixin = function(mixin) {
+createConfigMixin = function(mixin) {
   if (!mixin) {
     return emptyFunction;
   }
