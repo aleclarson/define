@@ -1,14 +1,20 @@
 
-{ isType, isConstructor, Kind } = require "type-utils"
+{ Kind, isType, isConstructor, assert, assertType } = require "type-utils"
 
 emptyFunction = require "emptyFunction"
 Property = require "Property"
 
+Target = [
+  Kind(Object)
+  null
+]
+
+module.exports =
 define = (target) ->
 
-  return unless target
+  assertType target, Target
 
-  return if arguments.length is 1
+  assert arguments.length > 1, "Must provide at least 2 arguments!"
 
   if arguments.length is 2
     for key, config of arguments[1]
@@ -34,8 +40,6 @@ define = (target) ->
       continue unless prop
       prop.define target, key
     return
-
-module.exports = define
 
 parseConfig = (config) ->
   return config if isConstructor config, Object

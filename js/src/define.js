@@ -1,19 +1,17 @@
-var Kind, Property, createConfigMixin, define, emptyFunction, isConstructor, isType, parseConfig, ref;
+var Kind, Property, Target, assert, assertType, createConfigMixin, define, emptyFunction, isConstructor, isType, parseConfig, ref;
 
-ref = require("type-utils"), isType = ref.isType, isConstructor = ref.isConstructor, Kind = ref.Kind;
+ref = require("type-utils"), Kind = ref.Kind, isType = ref.isType, isConstructor = ref.isConstructor, assert = ref.assert, assertType = ref.assertType;
 
 emptyFunction = require("emptyFunction");
 
 Property = require("Property");
 
-define = function(target) {
+Target = [Kind(Object), null];
+
+module.exports = define = function(target) {
   var config, configMixin, key, prop, ref1, ref2;
-  if (!target) {
-    return;
-  }
-  if (arguments.length === 1) {
-    return;
-  }
+  assertType(target, Target);
+  assert(arguments.length > 1, "Must provide at least 2 arguments!");
   if (arguments.length === 2) {
     ref1 = arguments[1];
     for (key in ref1) {
@@ -51,8 +49,6 @@ define = function(target) {
     }
   }
 };
-
-module.exports = define;
 
 parseConfig = function(config) {
   if (isConstructor(config, Object)) {
