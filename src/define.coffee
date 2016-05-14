@@ -1,13 +1,14 @@
 
-{ Kind, isType, isConstructor, assert, assertType } = require "type-utils"
-
+isConstructor = require "isConstructor"
 emptyFunction = require "emptyFunction"
+PureObject = require "PureObject"
+assertType = require "assertType"
 Property = require "Property"
+isType = require "isType"
+assert = require "assert"
+Kind = require "Kind"
 
-Target = [
-  Kind(Object)
-  null
-]
+Target = [ Kind(Object), PureObject ]
 
 module.exports =
 define = (target) ->
