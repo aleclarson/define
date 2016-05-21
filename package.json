@@ -10,6 +10,7 @@
     "assertType": "aleclarson/assertType#1.0.0",
     "emptyFunction": "aleclarson/emptyFunction#1.0.0",
     "isConstructor": "aleclarson/isConstructor#1.0.0",
+    "isDev": "aleclarson/isDev#1.0.0",
     "isType": "aleclarson/isType#1.0.0"
   },
   "repository": {
