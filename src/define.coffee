@@ -1,55 +1,33 @@
 
-require "isDev"
-
 isConstructor = require "isConstructor"
-emptyFunction = require "emptyFunction"
-PureObject = require "PureObject"
 assertType = require "assertType"
 Property = require "Property"
 isType = require "isType"
-assert = require "assert"
-Kind = require "Kind"
-
-if isDev
-  TargetType = [ Kind(Object), PureObject ]
-  KeyType = [ String ]
-  KeyType.push Symbol if Symbol
 
 module.exports =
-define = (target) ->
+define = (target, arg2, arg3) ->
 
-  assert arguments.length > 1, "Must provide at least 2 arguments!"
-  assertType target, TargetType if isDev
+  assertType target, Property.targetType
 
-  if arguments.length is 2
-    for key, config of arguments[1]
-      config = parseConfig config
-      prop = Property config
-      prop and prop.define target, key
-    return
+  if isType arg2, Property.keyType
+    return defineSingle target, arg2, arg3
 
-  if isType arguments[2], Object
-    configMixin = createConfigMixin arguments[1]
-    for key, config of arguments[2]
-      config = parseConfig config
-      configMixin config
-      prop = Property config
-      prop and prop.define target, key
-    return
+  if isConstructor arg2, Object
+    return defineMany target, arg2
 
-  assertType arguments[1], KeyType if isDev
-  config = parseConfig arguments[2]
-  prop = Property config
-  prop and prop.define target, arguments[1]
+  throw TypeError "Expected a String, Symbol, or Object as the 2nd argument!"
+
+defineSingle = (target, key, config) ->
+  prop = Property resolveConfig config
+  prop and prop.define target, key
   return
 
-parseConfig = (config) ->
+defineMany = (target, configs) ->
+  for key, config of configs
+    prop = Property resolveConfig config
+    prop and prop.define target, key
+  return
+
+resolveConfig = (config) ->
   return config if isConstructor config, Object
   return { value: config }
-
-createConfigMixin = (mixin) ->
-  return emptyFunction unless mixin
-  return emptyFunction if mixin.constructor isnt Object
-  return (config) ->
-    config[key] = value for key, value of mixin when config[key] is undefined
-    return

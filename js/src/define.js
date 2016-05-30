@@ -1,12 +1,6 @@
-var KeyType, Kind, Property, PureObject, TargetType, assert, assertType, createConfigMixin, define, emptyFunction, isConstructor, isType, parseConfig;
-
-require("isDev");
+var Property, assertType, define, defineMany, defineSingle, isConstructor, isType, resolveConfig;
 
 isConstructor = require("isConstructor");
-
-emptyFunction = require("emptyFunction");
-
-PureObject = require("PureObject");
 
 assertType = require("assertType");
 
@@ -14,78 +8,38 @@ Property = require("Property");
 
 isType = require("isType");
 
-assert = require("assert");
-
-Kind = require("Kind");
-
-if (isDev) {
-  TargetType = [Kind(Object), PureObject];
-  KeyType = [String];
-  if (Symbol) {
-    KeyType.push(Symbol);
+module.exports = define = function(target, arg2, arg3) {
+  assertType(target, Property.targetType);
+  if (isType(arg2, Property.keyType)) {
+    return defineSingle(target, arg2, arg3);
   }
-}
-
-module.exports = define = function(target) {
-  var config, configMixin, key, prop, ref, ref1;
-  assert(arguments.length > 1, "Must provide at least 2 arguments!");
-  if (isDev) {
-    assertType(target, TargetType);
+  if (isConstructor(arg2, Object)) {
+    return defineMany(target, arg2);
   }
-  if (arguments.length === 2) {
-    ref = arguments[1];
-    for (key in ref) {
-      config = ref[key];
-      config = parseConfig(config);
-      prop = Property(config);
-      prop && prop.define(target, key);
-    }
-    return;
-  }
-  if (isType(arguments[2], Object)) {
-    configMixin = createConfigMixin(arguments[1]);
-    ref1 = arguments[2];
-    for (key in ref1) {
-      config = ref1[key];
-      config = parseConfig(config);
-      configMixin(config);
-      prop = Property(config);
-      prop && prop.define(target, key);
-    }
-    return;
-  }
-  if (isDev) {
-    assertType(arguments[1], KeyType);
-  }
-  config = parseConfig(arguments[2]);
-  prop = Property(config);
-  prop && prop.define(target, arguments[1]);
+  throw TypeError("Expected a String, Symbol, or Object as the 2nd argument!");
 };
 
-parseConfig = function(config) {
+defineSingle = function(target, key, config) {
+  var prop;
+  prop = Property(resolveConfig(config));
+  prop && prop.define(target, key);
+};
+
+defineMany = function(target, configs) {
+  var config, key, prop;
+  for (key in configs) {
+    config = configs[key];
+    prop = Property(resolveConfig(config));
+    prop && prop.define(target, key);
+  }
+};
+
+resolveConfig = function(config) {
   if (isConstructor(config, Object)) {
     return config;
   }
   return {
     value: config
-  };
-};
-
-createConfigMixin = function(mixin) {
-  if (!mixin) {
-    return emptyFunction;
-  }
-  if (mixin.constructor !== Object) {
-    return emptyFunction;
-  }
-  return function(config) {
-    var key, value;
-    for (key in mixin) {
-      value = mixin[key];
-      if (config[key] === void 0) {
-        config[key] = value;
-      }
-    }
   };
 };
 
