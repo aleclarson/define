@@ -1,7 +1,7 @@
 {
   "name": "define",
   "version": "1.0.0",
-  "main": "js/src/define",
+  "main": "js/define",
   "dependencies": {
     "Property": "aleclarson/Property#1.0.0",
     "assertType": "aleclarson/assertType#1.0.0",

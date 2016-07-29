@@ -43,4 +43,4 @@ resolveConfig = function(config) {
   };
 };
 
-//# sourceMappingURL=../../map/src/define.map
+//# sourceMappingURL=map/define.map
