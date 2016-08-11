@@ -1,23 +1,17 @@
-var Property, assertType, define, defineMany, defineSingle, isConstructor, isType, resolveConfig;
+var Property, define, defineMany, defineSingle, isConstructor, resolveConfig;
 
 isConstructor = require("isConstructor");
 
-assertType = require("assertType");
-
 Property = require("Property");
 
-isType = require("isType");
-
-module.exports = define = function(target, arg2, arg3) {
-  assertType(target, Property.targetType);
-  if (isType(arg2, Property.keyType)) {
-    return defineSingle(target, arg2, arg3);
-  }
+define = function(target, arg2, arg3) {
   if (isConstructor(arg2, Object)) {
     return defineMany(target, arg2);
   }
-  throw TypeError("Expected a String, Symbol, or Object as the 2nd argument!");
+  return defineSingle(target, arg2, arg3);
 };
+
+module.exports = define;
 
 defineSingle = function(target, key, config) {
   var prop;

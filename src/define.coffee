@@ -1,21 +1,13 @@
 
 isConstructor = require "isConstructor"
-assertType = require "assertType"
 Property = require "Property"
-isType = require "isType"
 
-module.exports =
 define = (target, arg2, arg3) ->
-
-  assertType target, Property.targetType
-
-  if isType arg2, Property.keyType
-    return defineSingle target, arg2, arg3
-
   if isConstructor arg2, Object
     return defineMany target, arg2
+  return defineSingle target, arg2, arg3
 
-  throw TypeError "Expected a String, Symbol, or Object as the 2nd argument!"
+module.exports = define
 
 defineSingle = (target, key, config) ->
   prop = Property resolveConfig config
