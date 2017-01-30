@@ -1,0 +1,9 @@
+{
+  "name": "define",
+  "version": "1.0.1",
+  "main": "js/define",
+  "dependencies": {
+    "Property": "aleclarson/Property#1.2.3",
+    "isConstructor": "aleclarson/isConstructor#1.0.0"
+  }
+}
