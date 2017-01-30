@@ -1,23 +1,16 @@
 {
   "name": "define",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "js/define",
-  "dependencies": {
-    "Property": "aleclarson/Property#1.1.1",
-    "assertType": "aleclarson/assertType#2.0.0",
-    "isConstructor": "aleclarson/isConstructor#1.0.0",
-    "isType": "aleclarson/isType#1.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/aleclarson/define.git"
-  },
-  "licenses": [
-    "MIT"
+  "plugins": [
+    "lotus-coffee"
   ],
-  "lotus": {
-    "plugins": [
-      "lotus-coffee"
-    ]
+  "scripts": {
+    "build": "coffee-build -v 1.11.x -b -o js src",
+    "postinstall": "npm run build"
+  },
+  "dependencies": {
+    "Property": "aleclarson/Property#1.2.3",
+    "isConstructor": "aleclarson/isConstructor#1.0.0"
   }
 }
