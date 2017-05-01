@@ -234,7 +234,7 @@ describe "define()", ->
 
       obj.key = 2
 
-      deferred = Q.defer()
+      deferred = Promise.defer()
 
       Tracker.afterFlush ->
 
@@ -274,7 +274,7 @@ describe "define()", ->
 
       obj.key = 3
 
-      deferred = Q.defer()
+      deferred = Promise.defer()
 
       Tracker.afterFlush ->
 
@@ -313,7 +313,7 @@ describe "define()", ->
 
       obj.key = 2
 
-      deferred = Q.defer()
+      deferred = Promise.defer()
 
       Tracker.afterFlush ->
 

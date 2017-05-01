@@ -1,6 +1,6 @@
 {
   "name": "define",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "main": "js/define",
   "plugins": [
     "lotus-coffee"
@@ -10,7 +10,7 @@
     "postinstall": "npm run build"
   },
   "dependencies": {
-    "Property": "aleclarson/Property#1.2.3",
+    "Property": "aleclarson/Property#1.2.4",
     "isConstructor": "aleclarson/isConstructor#1.0.0"
   }
 }
