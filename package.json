@@ -10,7 +10,7 @@
     "postinstall": "npm run build"
   },
   "dependencies": {
-    "Property": "aleclarson/Property#1.2.3",
+    "Property": "aleclarson/Property#1.2.4",
     "isConstructor": "aleclarson/isConstructor#1.0.0"
   }
 }
